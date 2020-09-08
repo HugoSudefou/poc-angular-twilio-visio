@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "poc-angular-twilio-visio": {
+      "hosting": {
+        "poc-angular-twilio-visio": [
+          "poc-angular-twilio-visio"
+        ]
+      }
+    }
+  },
+  "projects": {
+    "default": "poc-angular-twilio-visio"
+  }
+}

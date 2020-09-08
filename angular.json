@@ -121,8 +121,13 @@
               "devServerTarget": "poc-angular-twilio-visio:serve:production"
             }
           }
+        },
+        "deploy": {
+          "builder": "@angular/fire:deploy",
+          "options": {}
         }
       }
-    }},
+    }
+  },
   "defaultProject": "poc-angular-twilio-visio"
 }
