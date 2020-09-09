@@ -1,5 +1,38 @@
 <div>
 <!--  <input type="text" [(ngModel)]="name">-->
 <!--  <button (click)="addVision()">Add a visio!</button>-->
-  <button (click)="connect()">connect</button>
+  <button (click)="test()">Test</button>
+  <p>
+    {{ message }}
+  </p>
+
+  <div id="video-container">
+
+    <div id="local" #localVideo>
+      <p>local video</p>
+    </div>
+
+    <div id="remote" #remoteVideo>
+      <p>remote video</p>
+    </div>
+    <input type="text" [(ngModel)]="identity" placeholder="username">
+    <br>
+    <input type="text" [(ngModel)]="roomName" placeholder="room name">
+    <br>
+    <div *ngIf="!!listRooms">
+      <select name="listRooms" [(ngModel)]="room" (ngModelChange)="roomSelected($event)"  id="">
+        <option *ngFor="let room of listRooms"  [ngValue]="room">{{room.uniqueName}}</option>
+        <option [value]="room">Aucune room selectionnée</option>
+      </select>
+    </div>
+    <br>
+    <input type="button" [disabled]="!identity || !roomName ? true : false" value="List Room" (click)="getListRooms()">
+    <br>
+    <input type="button" [disabled]="!identity || !roomName ? true : false" value="Create Room" (click)="createRoom()">
+    <br>
+    <input type="button" [disabled]="!identity || !roomName ? true : false" value="connect" (click)="connect()">
+    <br>
+    <input type="button" [disabled]="!twilioService.roomObj ? true : false" value="disconnect" (click)="disconnect()">
+
+  </div>
 </div>

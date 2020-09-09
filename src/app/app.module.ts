@@ -2,14 +2,14 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 
 import { AppRoutingModule } from './app-routing.module';
-import { AngularFireModule } from 'angularfire2';
-import { AngularFireDatabaseModule } from 'angularfire2/database';
+import { AngularFireModule } from '@angular/fire';
 
 import { AppComponent } from './app.component';
 import { environment } from '../environments/environment';
 import {TwilioService} from './services/twilio-service.service';
 import {FormsModule} from '@angular/forms';
 import {HttpClientModule} from '@angular/common/http';
+import { AngularFireFunctionsModule } from '@angular/fire/functions';
 
 @NgModule({
   declarations: [
@@ -19,7 +19,7 @@ import {HttpClientModule} from '@angular/common/http';
     BrowserModule,
     AppRoutingModule,
     AngularFireModule.initializeApp(environment.firebase, 'poc-angular-twilio-visio'),
-    AngularFireDatabaseModule,
+    AngularFireFunctionsModule,
     FormsModule,
     HttpClientModule,
   ],

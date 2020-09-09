@@ -1,8 +1,9 @@
 import {ElementRef, Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable, BehaviorSubject} from 'rxjs';
-import {connect, createLocalVideoTrack} from 'twilio-video';
+import * as Video from 'twilio-video';
 import {environment} from '../../environments/environment';
+import {AngularFireFunctions} from '@angular/fire/functions';
 
 
 @Injectable()
@@ -14,17 +15,29 @@ export class TwilioService {
   msgSubject = new BehaviorSubject('');
   roomObj: any;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private fns: AngularFireFunctions) {}
 
   private urlServer = `${environment.urlServer}/`;
 
-  getToken(identity): Observable<any> {
-    console.log(`${this.urlServer}token?identity=${identity}`)
-    return this.http.get(`${this.urlServer}token?identity=${identity}`);
+  getToken(identity, roomSid): Observable<any> {
+    const callable = this.fns.httpsCallable('getToken');
+    return callable({ identity: identity, roomSid: roomSid })
+  }
+
+  createRoom(roomName){
+    const callable = this.fns.httpsCallable('createRoom');
+    return callable({ roomName: roomName })
+  }
+
+  listRooms(){
+    const callable = this.fns.httpsCallable('listRooms');
+    return callable({})
   }
 
   connectToRoom(accessToken: string, options): void {
-    connect(accessToken, options).then(room => {
+    Video.connect(accessToken, options).then(room => {
+
+      console.log('room : ', room)
 
       this.roomObj = room;
 
@@ -92,13 +105,13 @@ export class TwilioService {
   }
 
   startLocalVideo(): void {
-    createLocalVideoTrack().then(track => {
+    Video.createLocalVideoTrack().then(track => {
       this.localVideo.nativeElement.appendChild(track.attach());
     });
   }
 
   localPreview(): void {
-    createLocalVideoTrack().then(track => {
+    Video.createLocalVideoTrack().then(track => {
       this.localVideo.nativeElement.appendChild(track.attach());
     });
   }
