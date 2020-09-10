@@ -89,20 +89,20 @@ export class AppComponent implements AfterViewInit {
     let storage = JSON.parse(localStorage.getItem('token') || '{}');
     let date = Date.now();
     console.log({storage, date})
-    // if (!this.room.uniqueName || !this.identity) { this.message = "enter username and room name."; return;}
+    if (!this.roomName || !this.identity) { this.message = "enter username and room name."; return;}
     if (storage['token'] && storage['created_at'] + 3600000 > date) {
       this.accessToken = storage['token'];
-      this.twilioService.connectToRoom(this.accessToken, {  name: 'test', audio: true, video: { width: 240 } })
+      this.twilioService.connectToRoom(this.accessToken, {  name: this.roomName, audio: true, video: { width: 240 } })
       return;
     }
-    this.twilioService.getToken(this.identity, 'test').subscribe(d => {
+    this.twilioService.getToken(this.identity, this.roomName).subscribe(d => {
         console.log('subscribe : ', d)
         this.accessToken = d['token'];
         localStorage.setItem('token', JSON.stringify({
           token: this.accessToken,
           created_at: date
         }));
-        this.twilioService.connectToRoom(this.accessToken, { name: 'test', audio: true, video: { width: 240 } })
+        this.twilioService.connectToRoom(this.accessToken, { name: this.roomName, audio: true, video: { width: 240 } })
       },
       error => {
         console.log('error : ', error)
