@@ -11,6 +11,7 @@ export class TwilioService {
 
   remoteVideo: ElementRef;
   localVideo: ElementRef;
+  participantVideo: ElementRef;
   previewing: boolean;
   msgSubject = new BehaviorSubject('');
   roomObj: any;
@@ -38,7 +39,6 @@ export class TwilioService {
 
 
   connectToRoom(accessToken: string, options): void {
-
     Video.connect(accessToken, options).then(room => {
 
       console.log('room : ', room)
@@ -53,20 +53,19 @@ export class TwilioService {
       room.participants.forEach(participant => {
         this.msgSubject.next("Already in Room: '" + participant.identity + "'");
         // console.log("Already in Room: '" + participant.identity + "'");
-        // this.attachParticipantTracks(participant);
+        this.participantConnected(participant);
       });
 
       room.on('participantDisconnected', (participant) => {
         this.msgSubject.next("Participant '" + participant.identity + "' left the room");
         // console.log("Participant '" + participant.identity + "' left the room");
 
-        this.detachParticipantTracks(participant);
+        this.participantDeconnected(participant);
       });
 
       room.on('participantConnected',  (participant) => {
-        participant.tracks.forEach(track => {
-          this.remoteVideo.nativeElement.appendChild(track.attach());
-        });
+
+        this.participantConnected(participant);
 
         // participant.on('trackAdded', track => {
         //   console.log('track added')
@@ -90,13 +89,7 @@ export class TwilioService {
       room.once('disconnected',  room => {
         this.msgSubject.next('You left the Room:' + room.name);
         console.log('room.localParticipant.tracks : ', room.localParticipant.tracks)
-        room.localParticipant.tracks.forEach(track => {
-            var attachedElements = track.detach();
-            attachedElements.forEach(element => element.remove());
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000)
-        });
+        this.localDeconnected(room, room.localParticipant.tracks);
       });
     });
   }
@@ -177,12 +170,130 @@ export class TwilioService {
   }
   */
 
+
+  addTrack(track) {
+    if (track.kind === 'audio' || track.kind === 'video') {
+      let t = document.getElementById('testLocalVideo');
+      if(!t.querySelector('video')){
+        this.participantVideo.nativeElement.appendChild(track.attach());
+      }
+    } else if (track.kind === 'data') {
+      track.on('message', data => {
+        console.log(data);
+      });
+    }
+  }
+
+  removeTracks(track) {
+    if (track.kind === 'audio' || track.kind === 'video') {
+      track.detach()
+      // this.participantVideo.nativeElement.appendChild(track.detach());
+    } else if (track.kind === 'data') {
+      track.on('message', data => {
+        console.log(data);
+      });
+    }
+  }
+
+
+  participantConnected(participant) {
+    participant.tracks.forEach(publication => {
+      this.trackPublished(publication, participant);
+    });
+
+    console.log('participantConnected :196   ', participant)
+
+    participant.on('trackPublished', publication => {
+      this.trackPublished(publication, participant);
+    });
+
+    participant.on('trackUnpublished', publication => {
+      console.log(`RemoteParticipant ${participant.identity} unpublished a RemoteTrack: ${publication}`);
+      this.trackUnpublished(publication, participant);
+    });
+  }
+
+
+  localDeconnected(room, localParticipant) {
+    console.log('localParticipant : ', localParticipant)
+    let localTracks = Array.from(localParticipant.valueOf());
+    console.log('localParticipant : ', localTracks)
+
+    localTracks.forEach((track:any) => {
+      console.log('track : ', track[1])
+      if (track[1].kind !== 'data') {
+        let trackConst = track[1];
+        console.log('detach() ', trackConst)
+        console.log('detach() ', room.localParticipant)
+        trackConst.track.stop();
+
+        trackConst.track.detach().forEach(element => element.remove());
+
+        // room.localParticipant.unpublishTrack(trackConst);
+        // this.localVideo.nativeElement.appendChild(track[1].track.detach());
+      }
+    });
+  }
+
+  participantDeconnected(participant) {
+    participant.tracks.forEach(publication => {
+      this.trackUnpublished(publication, participant);
+    });
+
+    participant.on('trackUnpublished', publication => {
+      console.log(`RemoteParticipant ${participant.identity} unpublished a RemoteTrack: ${publication}`);
+      this.trackUnpublished(publication, participant);
+    });
+  }
+
+  trackPublished(publication, participant) {
+    console.log(`RemoteParticipant ${participant.identity} published a RemoteTrack: ${publication}`);
+
+    publication.on('subscribed', track => {
+      console.log(`LocalParticipant subscribed to a RemoteTrack: ${track}`);
+      this.addTrack(track);
+    });
+
+    publication.on('unsubscribed', track => {
+      console.log(`LocalParticipant unsubscribed from a RemoteTrack: ${track}`);
+      this.removeTracks(track);
+    });
+  }
+
+  trackUnpublished(publication, participant) {
+    console.log(`trackUnpublished ${participant.identity} published a RemoteTrack: ${publication}`);
+
+    publication.on('unsubscribed', track => {
+      console.log(`LocalParticipant unsubscribed from a RemoteTrack: ${track}`);
+      this.removeTracks(track);
+    });
+  }
+
+  getTracks(participant) {
+    let t = participant.tracks.values();
+    console.log('t : ', t)
+    let tt:any = Array.from(t)
+    console.log('tt : ', tt)
+    console.log('tt : ', tt[0])
+    console.log('tt : ', tt[0].kind)
+    console.log('tt : ', tt[0].track)
+    return Array.from(participant.tracks.values()).filter((publication: any) => {
+      console.log('getTracks 111 : ', publication.track);
+      return publication;
+    });
+  }
+
   attachParticipantTracks(participant): void {
-    var tracks = Array.from(participant.tracks.values());
-    this.attachTracks([tracks]);
+    console.log('participant : ', participant)
+
+    var tracks = this.getTracks(participant);
+    console.log('tracks : ', tracks)
+    console.log('tracks.values() : ', tracks.values())
+    this.attachTracks(tracks);
   }
 
   attachTracks(tracks) {
+    console.log('tracks : ', tracks)
     tracks.forEach(track => {
       this.remoteVideo.nativeElement.appendChild(track.attach());
     });
@@ -190,6 +301,7 @@ export class TwilioService {
 
   startLocalVideo(): void {
     Video.createLocalVideoTrack().then(track => {
+      console.log('Video.createLocalVideoTrack track : ', track)
       this.localVideo.nativeElement.appendChild(track.attach());
     });
   }
@@ -207,7 +319,7 @@ export class TwilioService {
 
   detachTracks(tracks): void {
     tracks.forEach(function (track) {
-      track.detach().forEach(function (detachedElement) {
+      track.detach().forEach((detachedElement) => {
         detachedElement.remove();
       });
     });

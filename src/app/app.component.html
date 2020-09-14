@@ -1,39 +1,73 @@
-<div>
-<!--  <input type="text" [(ngModel)]="name">-->
-<!--  <button (click)="addVision()">Add a visio!</button>-->
-<!--  <button (click)="test()">Test</button>-->
-  <p>
-    {{ message }}
-  </p>
+<!--<div>-->
+<!--&lt;!&ndash;  <input type="text" [(ngModel)]="name">&ndash;&gt;-->
+<!--&lt;!&ndash;  <button (click)="addVision()">Add a visio!</button>&ndash;&gt;-->
+<!--&lt;!&ndash;  <button (click)="test()">Test</button>&ndash;&gt;-->
+<!--  <p>-->
+<!--    {{ message }}-->
+<!--  </p>-->
 
-  <div id="video-container">
+<!--  <div id="video-container">-->
 
-    <div id="local" #localVideo>
-      <p>local video</p>
-    </div>
+<!--    <div id="participantVideo" #participantVideo>-->
+<!--      <p>participantVideo</p>-->
+<!--    </div>-->
 
-    <div id="remote" #remoteVideo>
-      <p>remote video</p>
-    </div>
+<!--    <div id="testLocalVideo" #testLocalVideo>-->
+<!--    </div>-->
+
+<!--    <div id="local" #localVideo>-->
+<!--      <p>local video</p>-->
+<!--    </div>-->
+
+<!--    <div id="remote" #remoteVideo>-->
+<!--      <p>remote video</p>-->
+<!--    </div>-->
+<!--    <input type="text" [(ngModel)]="identity" placeholder="username">-->
+<!--    <br>-->
+<!--    <input type="text" [(ngModel)]="roomName" placeholder="room name">-->
+<!--    <br>-->
+<!--&lt;!&ndash;    <div *ngIf="!!listRooms">&ndash;&gt;-->
+<!--&lt;!&ndash;      <select name="listRooms" [(ngModel)]="room" (ngModelChange)="roomSelected($event)"  id="">&ndash;&gt;-->
+<!--&lt;!&ndash;        <option *ngFor="let room of listRooms"  [ngValue]="room">{{room.uniqueName}}</option>&ndash;&gt;-->
+<!--&lt;!&ndash;        <option [value]="room">Aucune room selectionnée</option>&ndash;&gt;-->
+<!--&lt;!&ndash;      </select>&ndash;&gt;-->
+<!--&lt;!&ndash;    </div>&ndash;&gt;-->
+<!--&lt;!&ndash;    <br>&ndash;&gt;-->
+<!--&lt;!&ndash;    <input type="button" [disabled]="!identity || !roomName ? true : false" value="List Room" (click)="getListRooms()">&ndash;&gt;-->
+<!--&lt;!&ndash;    <br>&ndash;&gt;-->
+<!--&lt;!&ndash;    <input type="button" [disabled]="!identity || !roomName ? true : false" value="Create Room" (click)="createRoom()">&ndash;&gt;-->
+<!--    <br>-->
+<!--    <input type="button" [disabled]="!identity || !roomName ? true : false" value="connect" (click)="connect()">-->
+<!--    <br>-->
+<!--    <input type="button" value="disconnect" (click)="disconnect()">-->
+
+<!--  </div>-->
+<!--</div>-->
+
+<button (click)="dsqdsd(true)">Only Mute mic</button>
+<button (click)="dsqdsd(false)">Only mic</button>
+<button (click)="muteVideo()">Only mute video</button>
+<button (click)="unMuteVideo()">Only video</button>
+
+<div id="remote-media"></div>
+<div id="controls">
+  <div id="preview">
+    <p class="instructions">Hello Beautiful</p>
+    <div id="local-media"></div>
+    <button id="button-preview" (click)="previewCam()">Preview My Camera</button>
+    <select id="video-devices"></select>
+  </div>
+  <div id="room-controls">
+    <p class="instructions">Room Name:</p>
     <input type="text" [(ngModel)]="identity" placeholder="username">
     <br>
     <input type="text" [(ngModel)]="roomName" placeholder="room name">
-    <br>
-<!--    <div *ngIf="!!listRooms">-->
-<!--      <select name="listRooms" [(ngModel)]="room" (ngModelChange)="roomSelected($event)"  id="">-->
-<!--        <option *ngFor="let room of listRooms"  [ngValue]="room">{{room.uniqueName}}</option>-->
-<!--        <option [value]="room">Aucune room selectionnée</option>-->
-<!--      </select>-->
-<!--    </div>-->
-<!--    <br>-->
-<!--    <input type="button" [disabled]="!identity || !roomName ? true : false" value="List Room" (click)="getListRooms()">-->
-<!--    <br>-->
-<!--    <input type="button" [disabled]="!identity || !roomName ? true : false" value="Create Room" (click)="createRoom()">-->
-    <br>
-    <input type="button" [disabled]="!identity || !roomName ? true : false" value="connect" (click)="connect()">
-    <br>
-    <input type="button" value="disconnect" (click)="disconnect()">
-
+    <button id="button-join" (click)="connect()">Join Room</button>
+    <button id="button-leave" (click)="leaveRoom()">Leave Room</button>
   </div>
+  <div>
+    <button (click)="muteUnmute()">{{textMuteUnmute()}}</button>
+    <button (click)="videoUnvideo()">{{textVideoUnvideo()}}</button>
+  </div>
+  <div id="log"></div>
 </div>
-

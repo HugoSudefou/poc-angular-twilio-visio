@@ -3,10 +3,14 @@
   width: 100%;
 }
 
-#remote, #local {
+#remote, #local, #participantVideo {
   width: 240px;
   height: 240px;
   margin: 45px auto;
+}
+
+#participantVideo {
+  background-color: green;
 }
 
 #remote {
@@ -17,7 +21,7 @@
   background-color: red;
 }
 
-#remote p, #local p {
+#remote p, #local p, #participantVideo p {
   text-align: center;
   color: white;
 }
