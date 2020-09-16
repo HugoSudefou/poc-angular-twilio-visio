@@ -141,14 +141,7 @@ export class TestTwilioService {
 
       // Join the Room with the token from the server and the
       // LocalParticipant's Tracks.
-      Video.connect(accessToken, connectOptions).then((r) => {
-        if(!this.camDeactivate){
-          Video.createLocalVideoTrack().then(function(localTrack) {
-            r.localParticipant.publishTrack(localTrack);
-          });
-        }
-        this.roomJoined(r);
-      }, (error) => {
+      Video.connect(accessToken, connectOptions).then((r) => this.roomJoined(r), (error) => {
         this.log('Could not connect to Twilio: ' + error.message);
       });
   };
@@ -187,8 +180,6 @@ export class TestTwilioService {
     console.log('room : ', room )
     this.activeRoom = room;
 
-    this.unmuteYourAudio();
-    this.unmuteYourVideo();
     //
     // navigator.mediaDevices.enumerateDevices().then(this.gotDevices);
     // const select = document.getElementById('video-devices');
@@ -209,7 +200,7 @@ export class TestTwilioService {
     // Attach the Tracks of the Room's Participants.
     room.participants.forEach((participant) => {
       this.log("Already in Room: '" + participant.identity + "'");
-      this.attachParticipantTracks(participant, participantContainer);
+      // this.attachParticipantTracks(participant, participantContainer);
     });
 
     // When a Participant joins the Room, log the event.
