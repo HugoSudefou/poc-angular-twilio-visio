@@ -43,19 +43,18 @@
 
 <!--  </div>-->
 <!--</div>-->
+<div id="participant-media"></div>
 
-<button (click)="dsqdsd(true)">Only Mute mic</button>
-<button (click)="dsqdsd(false)">Only mic</button>
-<button (click)="muteVideo()">Only mute video</button>
-<button (click)="unMuteVideo()">Only video</button>
-
-<div id="remote-media"></div>
 <div id="controls">
   <div id="preview">
     <p class="instructions">Hello Beautiful</p>
     <div id="local-media"></div>
     <button id="button-preview" (click)="previewCam()">Preview My Camera</button>
     <select id="video-devices"></select>
+    <button (click)="muteVideoLocal()">Mute video</button>
+    <button (click)="unmuteYourVideoLocal()">Video</button>
+    <button (click)="muteAudioLocal()">Mute audio</button>
+    <button (click)="unmuteYourAudioLocal()">Audio</button>
   </div>
   <div id="room-controls">
     <p class="instructions">Room Name:</p>
@@ -68,6 +67,7 @@
   <div>
     <button (click)="muteUnmute()">{{textMuteUnmute()}}</button>
     <button (click)="videoUnvideo()">{{textVideoUnvideo()}}</button>
+    <button (click)="disconnect()">Deconnexion</button>
   </div>
   <div id="log"></div>
 </div>

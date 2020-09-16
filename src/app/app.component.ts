@@ -27,6 +27,9 @@ export class AppComponent implements AfterViewInit {
   micStatus: boolean = true;
   videoStatus: boolean = true;
 
+  guardCam = false;
+  guardMic = false;
+
   listRooms: Room[] = null;
   room: Room = null;
 11
@@ -51,6 +54,32 @@ export class AppComponent implements AfterViewInit {
   }
 
   ngAfterViewInit() {
+
+    navigator.getUserMedia({audio: true}, () => {
+      // webcam is available
+      console.log('audio is available')
+      this.twilioTestService.micDeactivate = false;
+      this.guardMic = true;
+    }, () => {
+      console.log('audio is not available')
+      this.twilioTestService.micDeactivate = true;
+      this.guardMic = false;
+      // webcam is not available
+    });
+
+    navigator.getUserMedia({video: true}, (t) => {
+      // webcam is available
+      console.log('webcam is available')
+      this.twilioTestService.camDeactivate = false;
+      this.guardCam = true;
+      this.previewCam();
+    }, () => {
+      console.log('webcam is not available')
+      this.twilioTestService.camDeactivate = true;
+      this.guardCam = false;
+      // webcam is not available
+    });
+
     this.twilioService.localVideo = this.localVideo;
     this.twilioService.remoteVideo = this.remoteVideo;
     this.twilioService.participantVideo = this.participantVideo;
@@ -61,9 +90,8 @@ export class AppComponent implements AfterViewInit {
   }
 
   disconnect() {
-    if (this.twilioService.roomObj && this.twilioService.roomObj !== null) {
-      this.twilioService.roomObj.disconnect();
-      this.twilioService.roomObj = null;
+    if (this.twilioTestService.activeRoom && this.twilioTestService.activeRoom !== null) {
+      this.twilioTestService.deconnexion();
     }
   }
 
@@ -77,7 +105,16 @@ export class AppComponent implements AfterViewInit {
   * */
 
   previewCam(){
+
+    console.log('this.twilioTestService.camDeactivate : ', this.twilioTestService.camDeactivate)
+    console.log('this.twilioTestService.micDeactivate : ', this.twilioTestService.micDeactivate)
+    console.log('this.guardCam : ', this.guardCam)
+    console.log('this.guardMic : ', this.guardMic)
     this.twilioTestService.localPreview();
+  }
+
+  unPreviewCam(){
+    this.twilioTestService.unPreviewCam();
   }
 
   joinRoom(){
@@ -98,7 +135,7 @@ export class AppComponent implements AfterViewInit {
   }
 
   textVideoUnvideo(){
-    if(this.micStatus){
+    if(this.videoStatus){
       return 'Mute Video';
     } else {
       return 'Unmute Video';
@@ -123,50 +160,20 @@ export class AppComponent implements AfterViewInit {
     this.videoStatus = !this.videoStatus
   }
 
-
-  unMuteVideo(){
-    const video = document.querySelector('video');
-
-    // A video's MediaStream object is available through its srcObject attribute
-    const mediaStream: any = video.srcObject;
-
-    // Through the MediaStream, you can get the MediaStreamTracks with getTracks():
-    const tracks = mediaStream.getTracks();
-    tracks.forEach(track => track)
-
-    this.previewCam();
+  muteVideoLocal(){
+    this.twilioTestService.muteOrUnmuteYourLocalMedia('video', true);
   }
 
-  muteVideo(){
-    this.twilioTestService.previewTracks = null;
-    const video = document.querySelector('video');
-
-    // A video's MediaStream object is available through its srcObject attribute
-    const mediaStream: any = video.srcObject;
-
-    // Through the MediaStream, you can get the MediaStreamTracks with getTracks():
-    const tracks = mediaStream.getTracks();
-
-    // Tracks are returned as an array, so if you know you only have one, you can stop it with:
-    // tracks[0].stop();
-
-    // Or stop all like so:
-    tracks.forEach(track => track.stop())
-
+  muteAudioLocal(){
+    this.twilioTestService.muteOrUnmuteYourLocalMedia('audio', true);
   }
 
-  uuuuuu(muted){
-    navigator.mediaDevices.getUserMedia({video: true, audio: false})
-      .then(mediaStream => {
-        this.stopVideoOnly(mediaStream, muted)
-      })
+  unmuteYourVideoLocal(){
+    this.twilioTestService.muteOrUnmuteYourLocalMedia('video', false);
   }
 
-  dsqdsd(muted){
-    navigator.mediaDevices.getUserMedia({video: false, audio: true})
-      .then(mediaStream => {
-        this.stopAudioOnly(mediaStream, muted)
-      })
+  unmuteYourAudioLocal(){
+    this.twilioTestService.muteOrUnmuteYourLocalMedia('audio', false);
   }
 
   // stop only camera
@@ -174,6 +181,7 @@ export class AppComponent implements AfterViewInit {
     stream.getTracks().forEach((track) => {
       if (track.readyState == 'live' && track.kind === 'video') {
         if(muted){
+          this.twilioTestService.detachTracks([track]);
           track.stop();
         }
       }
@@ -223,7 +231,7 @@ export class AppComponent implements AfterViewInit {
         //   token: this.accessToken,
         //   created_at: date
         // }));
-        this.twilioTestService.connectToRoom(this.accessToken, { name: this.roomName}, this.roomName, this.identity)
+        this.twilioTestService.connectToRoom(this.accessToken, { name: this.roomName, audio: true}, this.roomName, this.identity)
       },
       error => {
         console.log('error : ', error)

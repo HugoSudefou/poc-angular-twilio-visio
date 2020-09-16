@@ -38,6 +38,9 @@ export class TestTwilioService {
   attachTracks(tracks, container) {
     tracks.forEach((track) => {
       if (track) {
+        console.log('track : ', track)
+        // track.restart();
+        // track.enable();
         container.appendChild(track.attach());
       }
     });
@@ -45,19 +48,33 @@ export class TestTwilioService {
 
 // Attach the Participant's Tracks to the DOM.
   attachParticipantTracks(participant, container) {
+
+    console.log('participant.tracks : ', participant.tracks.values());
+    let values = Array.from(participant.tracks.values());
+    let t = []
+    values.forEach((track: any) => {
+      console.log('values : ', track);
+      console.log('values.track : ', track.track);
+      console.log('values track: ', track['track']);
+      t.push(track);
+    })
     var tracks = Array.from(participant.tracks.values()).map((
       trackPublication : any
     ) => {
       return trackPublication.track;
     });
+    console.log('t : ', t)
+
     this.attachTracks(tracks, container);
   }
 
 // Detach the Tracks from the DOM.
   detachTracks(tracks) {
+    console.log('tracks : ', tracks)
     tracks.forEach((track) => {
       if (track) {
         track.detach().forEach((detachedElement) => {
+          console.log('track detach : ', detachedElement)
           detachedElement.remove();
         });
       }
@@ -71,7 +88,15 @@ export class TestTwilioService {
     ) => {
       return trackPublication.track;
     });
-    this.detachTracks(tracks);
+    tracks.forEach((track) => {
+      if (track) {
+        console.log('track befor detach')
+        track.detach().forEach((detachedElement) => {
+          console.log('track detach : ', detachedElement)
+          detachedElement.remove();
+        });
+      }
+    });
   }
 
   gotDevices(mediaDevices) {
@@ -103,9 +128,12 @@ export class TestTwilioService {
 
 // Obtain a token from the server in order to connect to the Room.
   connectToRoom(accessToken: string, options, roomName, identity) {
+
     this.identity = identity;
     document.getElementById('room-controls').style.display = 'block';
       var connectOptions = options;
+
+      console.log('this.previewTracks : ', this.previewTracks)
 
       if (this.previewTracks) {
         connectOptions.tracks = this.previewTracks;
@@ -113,7 +141,14 @@ export class TestTwilioService {
 
       // Join the Room with the token from the server and the
       // LocalParticipant's Tracks.
-      Video.connect(accessToken, connectOptions).then((r) => this.roomJoined(r), (error) => {
+      Video.connect(accessToken, connectOptions).then((r) => {
+        if(!this.camDeactivate){
+          Video.createLocalVideoTrack().then(function(localTrack) {
+            r.localParticipant.publishTrack(localTrack);
+          });
+        }
+        this.roomJoined(r);
+      }, (error) => {
         this.log('Could not connect to Twilio: ' + error.message);
       });
   };
@@ -151,6 +186,9 @@ export class TestTwilioService {
   roomJoined(room) {
     console.log('room : ', room )
     this.activeRoom = room;
+
+    this.unmuteYourAudio();
+    this.unmuteYourVideo();
     //
     // navigator.mediaDevices.enumerateDevices().then(this.gotDevices);
     // const select = document.getElementById('video-devices');
@@ -162,15 +200,16 @@ export class TestTwilioService {
 
     // Attach LocalParticipant's Tracks, if not already attached.
     var previewContainer = document.getElementById('local-media');
-    if (!previewContainer.querySelector('video')) {
+    var participantContainer = document.getElementById('participant-media');
+    if (!previewContainer.querySelector('video') && !this.camDeactivate) {
+      console.log('Attach LocalParticipant\'s Tracks, if not already attached.')
       this.attachParticipantTracks(room.localParticipant, previewContainer);
     }
 
     // Attach the Tracks of the Room's Participants.
     room.participants.forEach((participant) => {
       this.log("Already in Room: '" + participant.identity + "'");
-      var previewContainer = document.getElementById('remote-media');
-      this.attachParticipantTracks(participant, previewContainer);
+      this.attachParticipantTracks(participant, participantContainer);
     });
 
     // When a Participant joins the Room, log the event.
@@ -180,11 +219,12 @@ export class TestTwilioService {
 
     // When a Participant adds a Track, attach it to the DOM.
     room.on('trackSubscribed', (track, trackPublication, participant) => {
-      this.log(participant.identity + ' added track: ' + track.kind);
-      if((!this.camDeactivate && track.kind === 'video') || (!this.micDeactivate && track.kind === 'audio')){
-        var previewContainer = document.getElementById('remote-media');
-        this.attachTracks([track], previewContainer);
-      }
+      console.log('trackSubscribed : ', {track})
+      // if((!this.camDeactivate && track.kind === 'video') || (!this.micDeactivate && track.kind === 'audio')){
+        console.log('trackSubscribed in : ', {track})
+        this.log(participant.identity + ' added track: ' + track.kind);
+        this.attachTracks([track], participantContainer);
+      // }
     });
 
     // When a Participant removes a Track, detach it from the DOM.
@@ -228,7 +268,7 @@ export class TestTwilioService {
       (tracks) => {
         this.previewTracks = tracks;
         var previewContainer = document.getElementById('local-media');
-        if (!previewContainer.querySelector('video')) {
+        if (!previewContainer.querySelector('video') && !this.camDeactivate) {
           this.attachTracks(tracks, previewContainer);
         }
       },
@@ -241,6 +281,12 @@ export class TestTwilioService {
     );
   }
 
+  unPreviewCam(){
+    this.previewTracks = null;
+    var previewContainer = document.getElementById('local-media');
+    console.log('previewContainer : ', previewContainer);
+  }
+
 // Activity log.
   log(message) {
     var logDiv = document.getElementById('log');
@@ -250,6 +296,9 @@ export class TestTwilioService {
 
 // Leave Room.
   leaveRoomIfJoined() {
+
+    document.getElementById('button-join').style.display = 'inline';
+    document.getElementById('button-leave').style.display = 'none';
     if (this.activeRoom) {
       this.activeRoom.disconnect();
     }
@@ -291,6 +340,54 @@ export class TestTwilioService {
     this.muteOrUnmuteYourMedia('video', 'unmute');
   }
 
+  muteOrUnmuteYourLocalMedia(kind, mute) {
+    let localTrack = this.previewTracks;
+    let track: any = [];
+    if(kind === 'audio' && localTrack[0].kind === 'audio'){
+      track = localTrack[0]
+    } else if(kind === 'audio' && localTrack[1].kind === 'audio'){
+      track = localTrack[1]
+    }
+
+    if(kind === 'video' && localTrack[0].kind === 'video'){
+      track = localTrack[0]
+    } else if(kind === 'video' && localTrack[1].kind === 'video'){
+      track = localTrack[1]
+    }
+
+    console.log('track : ', track)
+
+    if (mute) {
+      if(kind === 'video'){
+        this.camDeactivate = true;
+      }
+      if(kind === 'audio'){
+        this.micDeactivate = true;
+      }
+      navigator.getUserMedia({video: true}, (stream) => {
+        // webcam is available
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        console.log('webcam is available')
+      }, () => {
+        console.log('webcam is not available')
+        // webcam is not available
+      });
+      track.stop();
+      track.disable();
+    } else {
+      if(kind === 'video'){
+        this.camDeactivate = false;
+      }
+      if(kind === 'audio'){
+        this.micDeactivate = false;
+      }
+      track.restart();
+      track.enable();
+    }
+  }
+
   muteOrUnmuteYourMedia(kind, action) {
     let room = this.activeRoom;
     const publications = kind === 'audio'
@@ -299,9 +396,13 @@ export class TestTwilioService {
 
     publications.forEach((publication) => {
       if (action === 'mute') {
+        publication.track.stop();
         publication.track.disable();
       } else {
-        publication.track.enable();
+        if((!this.camDeactivate && kind === 'video') || (!this.micDeactivate && kind === 'audio')) {
+          publication.track.enable();
+          publication.track.restart();
+        }
       }
     });
   }
