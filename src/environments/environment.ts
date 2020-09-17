@@ -4,7 +4,6 @@
 
 export const environment = {
   production: false,
-  urlServer: 'https://us-central1-poc-angular-twilio-visio.cloudfunctions.net/twilioApp',
   firebase: {
     apiKey: 'AIzaSyAyT5MjUVEriXXssBtSnwBCzAXIiJnlovk',
     authDomain: 'poc-angular-twilio-visio.firebaseapp.com',

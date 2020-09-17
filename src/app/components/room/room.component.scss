@@ -1,0 +1,25 @@
+.local-media {
+  position: absolute;
+  z-index: 999;
+  bottom: 5%;
+  left: 5%;
+
+  ::ng-deep .previewContainerVideo {
+    width: 150px;
+  }
+}
+
+.participant-media {
+  position: relative;
+  display: inline-flex;
+  z-index: 999;
+  width: 100%;
+  height: 400px;
+  overflow-y: auto;
+
+  ::ng-deep .participantContainerVideo {
+    display: inline-flex;
+    width: 400px;
+  }
+}
+

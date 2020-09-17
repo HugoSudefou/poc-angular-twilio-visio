@@ -1,5 +1,4 @@
 import {AfterViewInit, Component, OnInit} from '@angular/core';
-import {AngularFireFunctions} from '@angular/fire/functions';
 import {TwilioService} from '../../services/twilio-service.service';
 import {VideoService} from '../../services/video/video.service';
 import {MicrophoneService} from '../../services/microphone/microphone.service';
@@ -22,8 +21,7 @@ export class HomeComponent implements OnInit, AfterViewInit {
   room = null;
 
   public name: any;
-  constructor(private fns: AngularFireFunctions,
-              private twilioService: TwilioService,
+  constructor(private twilioService: TwilioService,
               private videoService: VideoService,
               private microphoneService: MicrophoneService,
               private route: Router) { }
@@ -31,11 +29,13 @@ export class HomeComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
   }
 
-
+  /**
+   * after view is init we setup audio and video of local user
+   */
   ngAfterViewInit() {
     // test if mic and video is work
-    this.microphoneService.tryMicrophone();
-    this.videoService.tryWebcam();
+    this.microphoneService.setupMicrophone();
+    this.videoService.setupLocalWebcam();
 
   }
 
@@ -43,21 +43,16 @@ export class HomeComponent implements OnInit, AfterViewInit {
     this.message = message;
   }
 
-  disconnect() {
-    if (this.twilioService.activeRoom && this.twilioService.activeRoom !== null) {
-      this.twilioService.deconnexion();
-    }
-  }
-
+  /**
+   * create local preview on demand
+   */
   previewCam(){
-    this.twilioService.localPreview();
+    this.twilioService.createLocalPreview();
   }
 
-  leaveRoom(){
-    this.twilioService.leaveRoomIfJoined();
-  }
-
-
+  /**
+   * String of btn mute/unmute audio
+   */
   textMuteUnmute(){
     if(this.micStatus){
       return 'Mute';
@@ -66,6 +61,9 @@ export class HomeComponent implements OnInit, AfterViewInit {
     }
   }
 
+  /**
+   * String of btn mute/unmute video
+   */
   textVideoUnvideo(){
     if(this.videoStatus){
       return 'Mute Video';
@@ -74,42 +72,34 @@ export class HomeComponent implements OnInit, AfterViewInit {
     }
   }
 
-  muteUnmute(){
-    if(this.micStatus){
-      this.microphoneService.muteYourAudio();
-    } else {
-      this.microphoneService.unmuteYourAudio();
-    }
-    this.micStatus = !this.micStatus
-  }
-
+  /**
+   * mute/unmute video
+   */
   videoUnvideo(){
     if(this.videoStatus){
-      this.videoService.muteYourVideo();
+      this.twilioService.muteOrUnmuteYourLocalMediaPreview('video', true);
     } else {
-      this.videoService.unmuteYourVideo();
+      this.twilioService.muteOrUnmuteYourLocalMediaPreview('video', false);
     }
     this.videoStatus = !this.videoStatus
   }
 
-  muteVideoLocal(){
-    this.twilioService.muteOrUnmuteYourLocalMedia('video', true);
+  /**
+   * mute/unmute audio
+   */
+  muteUnmute(){
+    if(this.micStatus){
+      this.twilioService.muteOrUnmuteYourLocalMediaPreview('audio', true);
+    } else {
+      this.twilioService.muteOrUnmuteYourLocalMediaPreview('audio', false);
+    }
+    this.micStatus = !this.micStatus
   }
 
-  muteAudioLocal(){
-    this.twilioService.muteOrUnmuteYourLocalMedia('audio', true);
-  }
-
-  unmuteYourVideoLocal(){
-    this.twilioService.muteOrUnmuteYourLocalMedia('video', false);
-  }
-
-  unmuteYourAudioLocal(){
-    this.twilioService.muteOrUnmuteYourLocalMedia('audio', false);
-  }
-
-
-  connect(): void {
+  /**
+   * Go to room want click on btn if identity and roomName is not empty
+   */
+  goToRoom(): void {
     if (!this.roomName || !this.identity) { this.message = "enter username and room name."; return;}
     this.route.navigateByUrl(`room/${this.roomName}/${this.identity}`)
   }

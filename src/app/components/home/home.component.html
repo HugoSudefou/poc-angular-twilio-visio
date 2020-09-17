@@ -3,14 +3,12 @@
   <div id="local-media"></div>
   <button id="button-preview" (click)="previewCam()">Preview My Camera</button>
   <select id="video-devices"></select>
-  <button (click)="muteVideoLocal()">Mute video</button>
-  <button (click)="unmuteYourVideoLocal()">Video</button>
-  <button (click)="muteAudioLocal()">Mute audio</button>
-  <button (click)="unmuteYourAudioLocal()">Audio</button>
+  <button (click)="muteUnmute()">{{textMuteUnmute()}}</button>
+  <button (click)="videoUnvideo()">{{textVideoUnvideo()}}</button>
 </div>
 
 <p class="instructions">Room Name:</p>
 <input type="text" [(ngModel)]="identity" placeholder="username">
 <br>
 <input type="text" [(ngModel)]="roomName" placeholder="room name">
-<button id="button-join" (click)="connect()">Join Room</button>
+<button id="button-join" (click)="goToRoom()">Join Room</button>
