@@ -10,10 +10,14 @@ import {TwilioService} from './services/twilio-service.service';
 import {FormsModule} from '@angular/forms';
 import {HttpClientModule} from '@angular/common/http';
 import { AngularFireFunctionsModule } from '@angular/fire/functions';
+import { RoomComponent } from './components/room/room.component';
+import { HomeComponent } from './components/home/home.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    RoomComponent,
+    HomeComponent
   ],
   imports: [
     BrowserModule,

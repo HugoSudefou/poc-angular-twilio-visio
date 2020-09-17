@@ -1,0 +1,13 @@
+<div id="participant-media"></div>
+<div id="local-media"></div>
+
+<div id="controls">
+  <div id="room-controls">
+    <button id="button-leave" (click)="leaveRoom()">Leave Room</button>
+  </div>
+  <div>
+    <button (click)="muteUnmute()">{{textMuteUnmute()}}</button>
+    <button (click)="videoUnvideo()">{{textVideoUnvideo()}}</button>
+  </div>
+  <div id="log"></div>
+</div>

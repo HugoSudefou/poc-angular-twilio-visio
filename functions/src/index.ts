@@ -19,15 +19,6 @@ exports.getToken = functions.https.onCall((data:any, res:any) => {
   const identity = data.identity;
   const roomSid = data.roomSid;
 
-
-  console.log('--------------------------------')
-  console.log('--------------------------------')
-  console.log('data : ', data)
-  console.log({identity})
-  console.log({roomSid})
-  console.log('--------------------------------')
-  console.log('--------------------------------')
-
   const token = new AccessToken(accountSid, videoTokenSid, secret, {identity: identity});
   const videoGrant = new VideoGrant({ room: roomSid });
   token.addGrant(videoGrant);

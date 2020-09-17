@@ -1,328 +1,272 @@
-import {ElementRef, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {Observable, BehaviorSubject} from 'rxjs';
+import {Injectable} from '@angular/core';
+import {Observable} from 'rxjs';
 import * as Video from 'twilio-video';
-import {environment} from '../../environments/environment';
 import {AngularFireFunctions} from '@angular/fire/functions';
+import {VideoService} from './video/video.service';
 
 
 @Injectable()
 export class TwilioService {
 
-  remoteVideo: ElementRef;
-  localVideo: ElementRef;
-  participantVideo: ElementRef;
-  previewing: boolean;
-  msgSubject = new BehaviorSubject('');
-  roomObj: any;
+  activeRoom;
+  previewTracks;
+  identity;
+  roomName;
+  camDeactivate = false;
+  micDeactivate = false;
 
-  roomParticipants;
+  constructor(private fns: AngularFireFunctions) {}
 
-  constructor(private http: HttpClient, private fns: AngularFireFunctions) {}
-
-  private urlServer = `${environment.urlServer}/`;
 
   getToken(identity, roomSid): Observable<any> {
     const callable = this.fns.httpsCallable('getToken');
     return callable({ identity: identity, roomSid: roomSid })
   }
 
-  createRoom(roomName){
-    const callable = this.fns.httpsCallable('createRoom');
-    return callable({ roomName: roomName })
-  }
-
-  listRooms(){
-    const callable = this.fns.httpsCallable('listRooms');
-    return callable({})
-  }
-
-
-  connectToRoom(accessToken: string, options): void {
-    Video.connect(accessToken, options).then(room => {
-
-      console.log('room : ', room)
-
-      this.roomObj = room;
-
-      if (!this.previewing && options['video']) {
-        this.startLocalVideo();
-        this.previewing = true;
+  // Attach the Tracks to the DOM.
+  attachTracks(tracks, container) {
+    tracks.forEach((track) => {
+      if (track) {
+        console.log('track : ', track)
+        // track.restart();
+        // track.enable();
+        container.appendChild(track.attach());
       }
-
-      room.participants.forEach(participant => {
-        this.msgSubject.next("Already in Room: '" + participant.identity + "'");
-        // console.log("Already in Room: '" + participant.identity + "'");
-        this.participantConnected(participant);
-      });
-
-      room.on('participantDisconnected', (participant) => {
-        this.msgSubject.next("Participant '" + participant.identity + "' left the room");
-        // console.log("Participant '" + participant.identity + "' left the room");
-
-        this.participantDeconnected(participant);
-      });
-
-      room.on('participantConnected',  (participant) => {
-
-        this.participantConnected(participant);
-
-        // participant.on('trackAdded', track => {
-        //   console.log('track added')
-        //   this.remoteVideo.nativeElement.appendChild(track.attach());
-        //   // document.getElementById('remote-media-div').appendChild(track.attach());
-        // });
-      });
-
-      // When a Participant adds a Track, attach it to the DOM.
-      room.on('trackAdded', (track, participant) => {
-        console.log(participant.identity + " added track: " + track.kind);
-        this.attachTracks([track]);
-      });
-
-      // When a Participant removes a Track, detach it from the DOM.
-      room.on('trackRemoved', (track, participant) => {
-        console.log(participant.identity + " removed track: " + track.kind);
-        this.detachTracks([track]);
-      });
-
-      room.once('disconnected',  room => {
-        this.msgSubject.next('You left the Room:' + room.name);
-        console.log('room.localParticipant.tracks : ', room.localParticipant.tracks)
-        this.localDeconnected(room, room.localParticipant.tracks);
-      });
     });
   }
 
-  /*
-  connectToRoom(accessToken: string, options): void {
-    Video.connect(accessToken, options).then(room => {
-      this.roomObj = room;
+  // Attach the Participant's Tracks to the DOM.
+  attachParticipantTracks(participant, container) {
+    var tracks = Array.from(participant.tracks.values()).map((
+      trackPublication : any
+    ) => {
+      return trackPublication.track;
+    });
+    this.attachTracks(tracks, container);
+  }
 
-      if (!this.previewing && options['video']) {
-        this.startLocalVideo();
-        this.previewing = true;
-      }
-
-      this.roomParticipants = room.participants;
-      room.participants.forEach(participant => {
-        this.attachParticipantTracks(participant);
-      });
-
-      room.on('participantDisconnected', (participant) => {
-        this.detachParticipantTracks(participant);
-      });
-
-      room.on('participantConnected', (participant) => {
-        this.roomParticipants = room.participants;
-        this.participantConnected(participant, room);
-
-        // participant.on('trackAdded', track => {
-        //   console.log('track added')
-        //   this.remoteVideo.nativeElement.appendChild(track.attach());
-        //   // document.getElementById('remote-media-div').appendChild(track.attach());
-        // });
-      });
-
-      // When a Participant adds a Track, attach it to the DOM.
-      room.on('trackPublished', (track, participant) => {
-        this.attachTracks([track]);
-      });
-
-      // When a Participant removes a Track, detach it from the DOM.
-      room.on('trackRemoved', (track, participant) => {
-        this.detachTracks([track]);
-      });
-
-      room.once('disconnected', room => {
-        room.localParticipant.tracks.forEach(track => {
-          track.track.stop();
-          const attachedElements = track.track.detach();
-          attachedElements.forEach(element => element.remove());
-          room.localParticipant.videoTracks.forEach(video => {
-            const trackConst = [video][0].track;
-            trackConst.stop();
-
-            trackConst.detach().forEach(element => element.remove());
-
-            room.localParticipant.unpublishTrack(trackConst);
-          });
-
-
-
-          let element = this.remoteVideo.nativeElement;
-          while (element.firstChild) {
-            element.removeChild(element.firstChild);
-          }
-          let localElement = this.localVideo.nativeElement;
-          while (localElement.firstChild) {
-            localElement.removeChild(localElement.firstChild);
-          }
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000)
+  // Detach the Tracks from the DOM.
+  detachTracks(tracks) {
+    tracks.forEach((track) => {
+      if (track) {
+        track.detach().forEach((detachedElement) => {
+          detachedElement.remove();
         });
-
-      });
-    }, (error) => {
-      alert(error.message);
-    });
-  }
-  */
-
-
-  addTrack(track) {
-    if (track.kind === 'audio' || track.kind === 'video') {
-      let t = document.getElementById('testLocalVideo');
-      if(!t.querySelector('video')){
-        this.participantVideo.nativeElement.appendChild(track.attach());
-      }
-    } else if (track.kind === 'data') {
-      track.on('message', data => {
-        console.log(data);
-      });
-    }
-  }
-
-  removeTracks(track) {
-    if (track.kind === 'audio' || track.kind === 'video') {
-      track.detach()
-      // this.participantVideo.nativeElement.appendChild(track.detach());
-    } else if (track.kind === 'data') {
-      track.on('message', data => {
-        console.log(data);
-      });
-    }
-  }
-
-
-  participantConnected(participant) {
-    participant.tracks.forEach(publication => {
-      this.trackPublished(publication, participant);
-    });
-
-    console.log('participantConnected :196   ', participant)
-
-    participant.on('trackPublished', publication => {
-      this.trackPublished(publication, participant);
-    });
-
-    participant.on('trackUnpublished', publication => {
-      console.log(`RemoteParticipant ${participant.identity} unpublished a RemoteTrack: ${publication}`);
-      this.trackUnpublished(publication, participant);
-    });
-  }
-
-
-  localDeconnected(room, localParticipant) {
-    console.log('localParticipant : ', localParticipant)
-    let localTracks = Array.from(localParticipant.valueOf());
-    console.log('localParticipant : ', localTracks)
-
-    localTracks.forEach((track:any) => {
-      console.log('track : ', track[1])
-      if (track[1].kind !== 'data') {
-        let trackConst = track[1];
-        console.log('detach() ', trackConst)
-        console.log('detach() ', room.localParticipant)
-        trackConst.track.stop();
-
-        trackConst.track.detach().forEach(element => element.remove());
-
-        // room.localParticipant.unpublishTrack(trackConst);
-        // this.localVideo.nativeElement.appendChild(track[1].track.detach());
       }
     });
   }
 
-  participantDeconnected(participant) {
-    participant.tracks.forEach(publication => {
-      this.trackUnpublished(publication, participant);
-    });
-
-    participant.on('trackUnpublished', publication => {
-      console.log(`RemoteParticipant ${participant.identity} unpublished a RemoteTrack: ${publication}`);
-      this.trackUnpublished(publication, participant);
-    });
-  }
-
-  trackPublished(publication, participant) {
-    console.log(`RemoteParticipant ${participant.identity} published a RemoteTrack: ${publication}`);
-
-    publication.on('subscribed', track => {
-      console.log(`LocalParticipant subscribed to a RemoteTrack: ${track}`);
-      this.addTrack(track);
-    });
-
-    publication.on('unsubscribed', track => {
-      console.log(`LocalParticipant unsubscribed from a RemoteTrack: ${track}`);
-      this.removeTracks(track);
-    });
-  }
-
-  trackUnpublished(publication, participant) {
-    console.log(`trackUnpublished ${participant.identity} published a RemoteTrack: ${publication}`);
-
-    publication.on('unsubscribed', track => {
-      console.log(`LocalParticipant unsubscribed from a RemoteTrack: ${track}`);
-      this.removeTracks(track);
-    });
-  }
-
-  getTracks(participant) {
-    let t = participant.tracks.values();
-    console.log('t : ', t)
-    let tt:any = Array.from(t)
-    console.log('tt : ', tt)
-    console.log('tt : ', tt[0])
-    console.log('tt : ', tt[0].kind)
-    console.log('tt : ', tt[0].track)
-    return Array.from(participant.tracks.values()).filter((publication: any) => {
-      console.log('getTracks 111 : ', publication.track);
-      return publication;
-    });
-  }
-
-  attachParticipantTracks(participant): void {
-    console.log('participant : ', participant)
-
-    var tracks = this.getTracks(participant);
-    console.log('tracks : ', tracks)
-    console.log('tracks.values() : ', tracks.values())
-    this.attachTracks(tracks);
-  }
-
-  attachTracks(tracks) {
-    console.log('tracks : ', tracks)
-    tracks.forEach(track => {
-      this.remoteVideo.nativeElement.appendChild(track.attach());
-    });
-  }
-
-  startLocalVideo(): void {
-    Video.createLocalVideoTrack().then(track => {
-      console.log('Video.createLocalVideoTrack track : ', track)
-      this.localVideo.nativeElement.appendChild(track.attach());
-    });
-  }
-
-  localPreview(): void {
-    Video.createLocalVideoTrack().then(track => {
-      this.localVideo.nativeElement.appendChild(track.attach());
-    });
-  }
-
+  // Detach the Participant's Tracks from the DOM.
   detachParticipantTracks(participant) {
-    var tracks = Array.from(participant.tracks.values());
-    this.detachTracks(tracks);
-  }
-
-  detachTracks(tracks): void {
-    tracks.forEach(function (track) {
-      track.detach().forEach((detachedElement) => {
-        detachedElement.remove();
-      });
+    var tracks = Array.from(participant.tracks.values()).map((
+      trackPublication : any
+    ) => {
+      return trackPublication.track;
+    });
+    tracks.forEach((track) => {
+      if (track) {
+        track.detach().forEach((detachedElement) => {
+          detachedElement.remove();
+        });
+      }
     });
   }
 
+  // When we are about to transition away from this page, disconnect
+  // from the room, if joined.
+
+  // Obtain a token from the server in order to connect to the Room.
+  connectToRoom(accessToken: string, options, roomName, identity) {
+
+    this.identity = identity;
+    document.getElementById('room-controls').style.display = 'block';
+    var connectOptions = options;
+
+    console.log('this.previewTracks : ', this.previewTracks)
+
+    if (this.previewTracks) {
+      connectOptions.tracks = this.previewTracks;
+    }
+
+    // Join the Room with the token from the server and the
+    // LocalParticipant's Tracks.
+    Video.connect(accessToken, connectOptions).then((r) => this.roomJoined(r), (error) => {
+      this.log('Could not connect to Twilio: ' + error.message);
+    });
+  };
+
+  deconnexion(){
+    this.log('Leaving room...');
+    this.activeRoom.disconnect();
+  }
+
+// Successfully connected!
+  roomJoined(room) {
+    this.activeRoom = room;
+
+    this.log("Joined as '" + this.identity + "'");
+
+    // Attach LocalParticipant's Tracks, if not already attached.
+    var previewContainer = document.getElementById('local-media');
+    var participantContainer = document.getElementById('participant-media');
+    if (!previewContainer.querySelector('video') && !this.camDeactivate) {
+      console.log('Attach LocalParticipant\'s Tracks, if not already attached.')
+      this.attachParticipantTracks(room.localParticipant, previewContainer);
+    }
+
+    // Attach the Tracks of the Room's Participants.
+    room.participants.forEach((participant) => {
+      this.log("Already in Room: '" + participant.identity + "'");
+      // this.attachParticipantTracks(participant, participantContainer);
+    });
+
+    // When a Participant joins the Room, log the event.
+    room.on('participantConnected', (participant) => {
+      this.log("Joining: '" + participant.identity + "'");
+    });
+
+    // When a Participant adds a Track, attach it to the DOM.
+    room.on('trackSubscribed', (track, trackPublication, participant) => {
+      this.log(participant.identity + ' added track: ' + track.kind);
+      this.attachTracks([track], participantContainer);
+    });
+
+    // When a Participant removes a Track, detach it from the DOM.
+    room.on('trackUnsubscribed', (track, trackPublication, participant) => {
+      this.log(participant.identity + ' removed track: ' + track.kind);
+      this.detachTracks([track]);
+    });
+
+    // When a Participant leaves the Room, detach its Tracks.
+    room.on('participantDisconnected', (participant) => {
+      this.log("Participant '" + participant.identity + "' left the room");
+      this.detachParticipantTracks(participant);
+    });
+
+    // Once the LocalParticipant leaves the room, detach the Tracks
+    // of all Participants, including that of the LocalParticipant.
+    room.on('disconnected', () => {
+      this.log('Left');
+
+      if (this.previewTracks) {
+        this.previewTracks.forEach((track) => {
+          track.stop();
+        });
+      }
+      this.detachParticipantTracks(room.localParticipant);
+      room.participants.forEach(this.detachParticipantTracks);
+      this.activeRoom = null;
+      document.getElementById('button-join').style.display = 'inline';
+      document.getElementById('button-leave').style.display = 'none';
+      // select.removeEventListener('change', this.updateVideoDevice);
+    });
+  }
+
+// Preview LocalParticipant's Tracks.
+  localPreview() {
+    var localTracksPromise = this.previewTracks
+      ? Promise.resolve(this.previewTracks)
+      : Video.createLocalTracks();
+
+    localTracksPromise.then(
+      (tracks) => {
+        this.previewTracks = tracks;
+        var previewContainer = document.getElementById('local-media');
+        if (!previewContainer.querySelector('video') && !this.camDeactivate) {
+          this.attachTracks(tracks, previewContainer);
+        }
+      },
+      (error) => {
+        console.error('Unable to access local media', error);
+        this.camDeactivate = true;
+        this.micDeactivate = true;
+        this.log('Unable to access Camera and Microphone');
+      }
+    );
+  }
+
+
+// Activity log.
+  log(message) {
+    var logDiv = document.getElementById('log');
+    logDiv.innerHTML += '<p>&gt;&nbsp;' + message + '</p>';
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+// Leave Room.
+  leaveRoomIfJoined() {
+    document.getElementById('button-join').style.display = 'inline';
+    document.getElementById('button-leave').style.display = 'none';
+    if (this.activeRoom) {
+      this.activeRoom.disconnect();
+    }
+  }
+
+  muteOrUnmuteYourLocalMedia(kind, mute) {
+    let localTrack = this.previewTracks;
+    let track: any = [];
+    if((kind === 'audio' && localTrack[0].kind === 'audio') || (kind === 'video' && localTrack[0].kind === 'video')){
+      track = localTrack[0]
+    } else if((kind === 'audio' && localTrack[1].kind === 'audio') || (kind === 'video' && localTrack[1].kind === 'video')){
+      track = localTrack[1]
+    }
+
+    if (mute) {
+      if(kind === 'video'){
+        this.camDeactivate = true;
+        this.muteVideoLocal();
+      }
+      if(kind === 'audio'){
+        this.micDeactivate = true;
+      }
+      track.stop();
+      track.disable();
+    } else {
+      if(kind === 'video'){
+        this.camDeactivate = false;
+      }
+      if(kind === 'audio'){
+        this.micDeactivate = false;
+      }
+      track.restart();
+      track.enable();
+    }
+  }
+
+  muteVideoLocal(){
+    navigator.getUserMedia({video: true}, (stream) => {
+      // webcam is available
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
+    }, () => {
+      // webcam is not available
+    });
+  }
+
+
+  /**
+   * Mute/unmute your media in a Room.
+   * @param {'audio'|'video'} kind - The type of media you want to mute/unmute
+   * @param {'mute'|'unmute'} action - Whether you want to mute/unmute
+   */
+
+  muteOrUnmuteYourMedia(kind, action) {
+    let room = this.activeRoom;
+    const publications = kind === 'audio'
+      ? room.localParticipant.audioTracks
+      : room.localParticipant.videoTracks;
+
+    publications.forEach((publication) => {
+      if (action === 'mute') {
+        publication.track.stop();
+        publication.track.disable();
+      } else {
+        if((!this.camDeactivate && kind === 'video') || (!this.micDeactivate && kind === 'audio')) {
+          publication.track.enable();
+          publication.track.restart();
+        }
+      }
+    });
+  }
 }

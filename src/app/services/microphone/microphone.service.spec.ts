@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { TestTwilioService } from './test-twilio.service';
+import { MicrophoneService } from './microphone.service';
 
-describe('TestTwilioService', () => {
-  let service: TestTwilioService;
+describe('MicrophoneService', () => {
+  let service: MicrophoneService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(TestTwilioService);
+    service = TestBed.inject(MicrophoneService);
   });
 
   it('should be created', () => {
